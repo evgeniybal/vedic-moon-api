@@ -1,12 +1,15 @@
 {
   "name": "vedic-moon-api",
   "version": "1.0.0",
-  "description": "",
+  "description": "Vedic Moon API - Get moon's sidereal position, rashi, nakshatra, and tithi",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "dev": "nodemon index.js",
     "start": "node index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   },
   "keywords": [],
   "author": "",
