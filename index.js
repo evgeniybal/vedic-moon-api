@@ -104,7 +104,7 @@ async function findNextIngress(body, fromDate, stepDeg) {
 }
 
 app.get('/', (_, res) => {
-  res.send('Vedic Moon API. Try /moon?iso=2025-08-08T12:00:00Z or visit /docs for API reference');
+  res.send('Vedic Moon API. Try /moon?iso=2025-08-08T12:00:00Z or visit /docs for interactive docs or /simple-docs for basic documentation');
 });
 
 // Serve OpenAPI spec JSON
@@ -112,14 +112,83 @@ app.get('/openapi.json', (_, res) => {
   res.sendFile(path.join(__dirname, 'openapi.json'));
 });
 
-// Scalar (modern OpenAPI UI)
-app.use('/docs', apiReference({
-  spec: {
-    url: '/openapi.json',
+// Simple HTML documentation (backup if Scalar fails)
+app.get('/simple-docs', (_, res) => {
+  res.send(`
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vedic Moon API Documentation</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .endpoint { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .method { color: #2563eb; font-weight: bold; }
+        .url { color: #059669; }
+        pre { background: #1f2937; color: #f3f4f6; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🌙 Vedic Moon API</h1>
+    <p>Get moon's sidereal position, rashi, nakshatra, and tithi using Vedic astrology calculations.</p>
+    
+    <div class="endpoint">
+        <h2><span class="method">GET</span> <span class="url">/moon</span></h2>
+        <p>Get current moon data for now</p>
+        <p><strong>Example:</strong> <a href="/moon" target="_blank">/moon</a></p>
+    </div>
+    
+    <div class="endpoint">
+        <h2><span class="method">GET</span> <span class="url">/moon?iso=DATETIME</span></h2>
+        <p>Get moon data for specific date/time</p>
+        <p><strong>Example:</strong> <a href="/moon?iso=2025-08-08T12:00:00Z" target="_blank">/moon?iso=2025-08-08T12:00:00Z</a></p>
+    </div>
+    
+    <h3>Response Format:</h3>
+    <pre>{
+  "input": { "iso": "2025-08-08T12:00:00.000Z" },
+  "moon": {
+    "siderealLongitudeDeg": 280.92,
+    "rashi": { "index": 9, "name": "Makara", "degreesInSign": 10.92 },
+    "nakshatra": { "index": 21, "name": "Shravana", "pada": 1, "degreesIntoNakshatra": 0.92 },
+    "tithi": { "number": 15, "paksha": "Shukla", "elongDeg": 168.98 }
   },
-  layout: 'modern',
-  theme: 'kepler',
-}));
+  "nextIngress": {
+    "rashi": { "when": "2025-08-09T20:40:45.731Z", "rashiIndex": 10, "rashiName": "Kumbha" },
+    "nakshatra": { "when": "2025-08-09T08:53:15.628Z", "nakshatraIndex": 22, "nakshatraName": "Dhanishtha" }
+  }
+}</pre>
+
+    <h3>Data Explanation:</h3>
+    <ul>
+        <li><strong>siderealLongitudeDeg:</strong> Moon's position in sidereal zodiac (0-360°)</li>
+        <li><strong>rashi:</strong> Zodiac sign (12 signs, 30° each)</li>
+        <li><strong>nakshatra:</strong> Lunar mansion (27 nakshatras, ~13.33° each)</li>
+        <li><strong>pada:</strong> Quarter of nakshatra (1-4)</li>
+        <li><strong>tithi:</strong> Lunar day based on Moon-Sun angle</li>
+        <li><strong>nextIngress:</strong> When Moon enters next rashi/nakshatra</li>
+    </ul>
+    
+    <p><a href="/docs">Try Scalar Interactive Docs</a> | <a href="https://github.com/evgeniybal/vedic-moon-api">GitHub Repository</a></p>
+</body>
+</html>
+  `);
+});
+
+// Scalar (modern OpenAPI UI) - with error handling
+app.use('/docs', (req, res, next) => {
+  try {
+    apiReference({
+      spec: {
+        url: '/openapi.json',
+      },
+      layout: 'modern',
+      theme: 'kepler',
+    })(req, res, next);
+  } catch (error) {
+    console.error('Scalar error:', error);
+    res.redirect('/simple-docs');
+  }
+});
 
 app.get('/moon', async (req, res) => {
   try {
