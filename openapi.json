@@ -6,7 +6,14 @@
     "description": "API to compute Vedic lunar details (rashi, nakshatra, tithi) using Astronomy Engine."
   },
   "servers": [
-    { "url": "http://localhost:3000" }
+    { 
+      "url": "https://vedic-moon-api.onrender.com",
+      "description": "Production server"
+    },
+    { 
+      "url": "http://localhost:3000",
+      "description": "Development server"
+    }
   ],
   "paths": {
     "/": {
