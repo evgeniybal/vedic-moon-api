@@ -1,5 +1,8 @@
 const express = require('express');
-const { AstroTime, Body, EclipticLongitude, Moon, Sun, SiderealMode, Siderial } = require('astronomy-engine');
+const { AstroTime, Body, GeoVector, Ecliptic, PairLongitude } = require('astronomy-engine');
+// Add Scalar OpenAPI UI and path util
+const { apiReference } = require('@scalar/express-api-reference');
+const path = require('path');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -21,13 +24,17 @@ const NAKSHATRAS = [
 // sidereal longitude (Lahiri)
 function siderealLongitudeDeg(body, date) {
   const time = new AstroTime(date);
-  // Tropical ecliptic longitude
-  const lon = EclipticLongitude(body, time);
-  // Convert to sidereal (Lahiri)
-  // Astronomy Engine can produce sidereal longitudes via Siderial function.
-  const sid = Siderial(SiderealMode.Lahiri, time, lon);
-  // Normalize 0..360
-  return ((sid + 360) % 360);
+  // Geocentric tropical ecliptic longitude (true ecliptic of date)
+  const vec = GeoVector(body, time, true); // aberration-corrected geocentric vector (EQJ)
+  const ecl = Ecliptic(vec); // to true ecliptic of date (ECT)
+  const tropicalLon = ((ecl.elon % 360) + 360) % 360;
+  // Lahiri ayanamsha (approx). Base at J2000: ~23.854055°, rate ~50.290966"/yr.
+  const J2000_UTC = Date.UTC(2000, 0, 1, 12, 0, 0);
+  const msPerYear = 365.2425 * 24 * 3600 * 1000;
+  const yearsSinceJ2000 = (date.getTime() - J2000_UTC) / msPerYear;
+  const ayanamsa = (23.854055 + 0.01396887831 * yearsSinceJ2000); // degrees
+  const sid = tropicalLon - ayanamsa;
+  return ((sid % 360) + 360) % 360;
 }
 
 // Rashi from longitude
@@ -52,9 +59,7 @@ function nakshatraInfo(lon) {
 // Tithi (Moon-Sun elongation, each 12°)
 function tithiInfo(date) {
   const time = new AstroTime(date);
-  const moonLon = EclipticLongitude(Body.Moon, time);
-  const sunLon = EclipticLongitude(Body.Sun, time);
-  const elong = ((moonLon - sunLon + 360) % 360);
+  const elong = PairLongitude(Body.Moon, Body.Sun, time); // 0..360 apparent ecliptic separation
   const idx = Math.floor(elong / 12); // 0..29
   const tithiNumber = idx + 1; // 1..30
   const paksha = tithiNumber <= 15 ? 'Shukla' : 'Krishna';
@@ -99,8 +104,22 @@ async function findNextIngress(body, fromDate, stepDeg) {
 }
 
 app.get('/', (_, res) => {
-  res.send('Vedic Moon API. Try /moon?iso=2025-08-08T12:00:00Z');
+  res.send('Vedic Moon API. Try /moon?iso=2025-08-08T12:00:00Z or visit /docs for API reference');
 });
+
+// Serve OpenAPI spec JSON
+app.get('/openapi.json', (_, res) => {
+  res.sendFile(path.join(__dirname, 'openapi.json'));
+});
+
+// Scalar (modern OpenAPI UI)
+app.use('/docs', apiReference({
+  spec: {
+    url: '/openapi.json',
+  },
+  layout: 'modern',
+  theme: 'kepler',
+}));
 
 app.get('/moon', async (req, res) => {
   try {

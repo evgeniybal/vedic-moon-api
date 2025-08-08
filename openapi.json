@@ -1,0 +1,106 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Vedic Moon API",
+    "version": "1.0.0",
+    "description": "API to compute Vedic lunar details (rashi, nakshatra, tithi) using Astronomy Engine."
+  },
+  "servers": [
+    { "url": "http://localhost:3000" }
+  ],
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Root",
+        "responses": {
+          "200": { "description": "Welcome string" }
+        }
+      }
+    },
+    "/moon": {
+      "get": {
+        "summary": "Get lunar data for a given ISO datetime",
+        "parameters": [
+          {
+            "name": "iso",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "format": "date-time" },
+            "description": "ISO datetime (UTC). Defaults to now."
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Computed lunar data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "input": {
+                      "type": "object",
+                      "properties": { "iso": { "type": "string", "format": "date-time" } }
+                    },
+                    "moon": {
+                      "type": "object",
+                      "properties": {
+                        "siderealLongitudeDeg": { "type": "number" },
+                        "rashi": {
+                          "type": "object",
+                          "properties": {
+                            "index": { "type": "integer" },
+                            "name": { "type": "string" },
+                            "degreesInSign": { "type": "number" }
+                          }
+                        },
+                        "nakshatra": {
+                          "type": "object",
+                          "properties": {
+                            "index": { "type": "integer" },
+                            "name": { "type": "string" },
+                            "pada": { "type": "integer" },
+                            "degreesIntoNakshatra": { "type": "number" }
+                          }
+                        },
+                        "tithi": {
+                          "type": "object",
+                          "properties": {
+                            "number": { "type": "integer", "minimum": 1, "maximum": 30 },
+                            "paksha": { "type": "string", "enum": ["Shukla", "Krishna"] },
+                            "elongDeg": { "type": "number" }
+                          }
+                        }
+                      }
+                    },
+                    "nextIngress": {
+                      "type": "object",
+                      "properties": {
+                        "rashi": {
+                          "type": ["object", "null"],
+                          "properties": {
+                            "when": { "type": "string", "format": "date-time" },
+                            "rashiIndex": { "type": "integer" },
+                            "rashiName": { "type": "string" }
+                          }
+                        },
+                        "nakshatra": {
+                          "type": ["object", "null"],
+                          "properties": {
+                            "when": { "type": "string", "format": "date-time" },
+                            "nakshatraIndex": { "type": "integer" },
+                            "nakshatraName": { "type": "string" }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": { "description": "Error computing lunar data" }
+        }
+      }
+    }
+  }
+}

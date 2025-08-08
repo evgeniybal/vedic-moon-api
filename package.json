@@ -13,6 +13,7 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@scalar/express-api-reference": "^0.8.13",
     "astronomy-engine": "^2.1.19",
     "express": "^5.1.0"
   },
